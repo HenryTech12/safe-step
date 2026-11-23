@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -5,6 +7,7 @@ import '../l10n/strings.dart';
 import '../models/app_mode.dart';
 import '../models/language.dart';
 import '../services/livekit_service.dart';
+import '../services/location_service.dart';
 import '../services/prefs_service.dart';
 import '../theme.dart';
 import '../widgets/status_card.dart';
@@ -25,6 +28,8 @@ class GuideScreen extends StatefulWidget {
 class _GuideScreenState extends State<GuideScreen> {
   late final AppLanguage _lang = widget.prefs.language;
   late AppMode _mode = widget.prefs.lastMode;
+  final LocationService _location = LocationService();
+  StreamSubscription<Fix>? _fixSub;
 
   @override
   void initState() {
@@ -34,8 +39,16 @@ class _GuideScreenState extends State<GuideScreen> {
       ..onModeFromAgent = (m) {
         widget.prefs.setLastMode(m);
         setState(() => _mode = m);
+      }
+      ..savedPlaces = (() => widget.prefs.savedPlaces)
+      ..onPlaceSaved = (p) {
+        final places = [...widget.prefs.savedPlaces.where((x) => x.name != p.name), p];
+        widget.prefs.setSavedPlaces(places);
       };
     _connect();
+    _location.start().then((ok) {
+      if (ok) _fixSub = _location.fixes.listen(widget.voice.publishFix);
+    });
   }
 
   Future<void> _connect() => widget.voice.connect(language: _lang, mode: _mode);
@@ -57,6 +70,8 @@ class _GuideScreenState extends State<GuideScreen> {
   @override
   void dispose() {
     widget.voice.removeListener(_onChange);
+    _fixSub?.cancel();
+    _location.dispose();
     super.dispose();
   }
 

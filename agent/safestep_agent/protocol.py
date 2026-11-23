@@ -17,7 +17,12 @@ DEFAULT_MODE: Mode = "hazard_detection"
 TOPIC_MODE = "mode"  # both ways: {"mode": "...", "source": "agent"|"phone"}
 TOPIC_WARNINGS = "warnings"  # agent → phone: {"minor_silenced": bool}
 TOPIC_HAZARD = "hazard_event"  # phone → agent: {"class", "side", "distance_band"}
-TOPIC_GPS = "gps"  # phone → agent (Phase 2): {"lat", "lng", "heading"?}
+TOPIC_GPS = "gps"  # phone → agent: {"lat", "lng", "heading"?, "accuracy"?}
+TOPIC_PLACES = "places"  # phone → agent on connect: {"places": [{"name", "lat", "lng"}]}
+TOPIC_PLACE_SAVED = "place_saved"  # agent → phone: {"name", "lat", "lng"}
+TOPIC_CONTROL = "control"  # phone → agent: {"action": "repeat"}
+TOPIC_FRAME_REQUEST = "frame_request"  # agent → phone: {"id"}
+STREAM_CAMERA_FRAME = "camera_frame"  # phone → agent byte stream (JPEG), attributes {"id"}
 
 CRITICAL_CLASSES = frozenset({"open_gutter", "open_manhole", "okada"})
 

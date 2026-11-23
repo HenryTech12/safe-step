@@ -36,7 +36,10 @@ from .latency import LatencyTracker, jsonl_sink  # noqa: E402
 from .prompts import build_instructions  # noqa: E402
 from .session_state import SessionState  # noqa: E402
 from .speech import build_stt, build_tts  # noqa: E402
+from .nav.controller import NavigationController  # noqa: E402
+from .nav.maps import MapsClient  # noqa: E402
 from .tools.mode import make_mode_tools  # noqa: E402
+from .tools.navigation import make_navigation_tools  # noqa: E402
 
 logger = logging.getLogger("safestep.agent")
 
@@ -50,10 +53,10 @@ def _thinking_config(model: str) -> dict:
 
 
 class SafeStepAgent(Agent):
-    def __init__(self, state: SessionState) -> None:
+    def __init__(self, state: SessionState, nav: NavigationController) -> None:
         super().__init__(
             instructions=build_instructions(state.language, state.mode),
-            tools=make_mode_tools(),
+            tools=make_mode_tools() + make_navigation_tools(nav),
         )
 
 
@@ -114,6 +117,19 @@ async def entrypoint(ctx: JobContext) -> None:
     def _on_metrics(ev: MetricsCollectedEvent) -> None:
         tracker.on_metrics(ev.metrics)
 
+    # --- navigation: the tracker speaks turns itself, without the LLM ---
+    def _speak_nav(text: str, urgent: bool) -> None:
+        try:
+            if urgent:
+                session.interrupt()
+            session.say(text, allow_interruptions=not urgent)
+        except RuntimeError as e:
+            logger.debug("nav say failed: %s", e)
+
+    maps = MapsClient()
+    nav = NavigationController(maps, lang.code, _speak_nav)
+    ctx.add_shutdown_callback(maps.aclose)
+
     # --- data messages from the phone ---
     def _on_data(packet: rtc.DataPacket) -> None:
         payload = protocol.decode(packet.data)
@@ -129,6 +145,22 @@ async def entrypoint(ctx: JobContext) -> None:
                         build_instructions(state.language, state.mode)
                     )
                 )
+        elif packet.topic == protocol.TOPIC_GPS:
+            try:
+                nav.on_gps(
+                    float(payload["lat"]),
+                    float(payload["lng"]),
+                    _opt_float(payload.get("heading")),
+                    _opt_float(payload.get("accuracy")),
+                )
+            except (KeyError, TypeError, ValueError):
+                pass
+        elif packet.topic == protocol.TOPIC_PLACES:
+            for p in payload.get("places") or []:
+                try:
+                    nav.saved_places[str(p["name"])] = (float(p["lat"]), float(p["lng"]))
+                except (KeyError, TypeError, ValueError):
+                    continue
         elif packet.topic == protocol.TOPIC_HAZARD:
             # Phone already played the offline alert; just help the user carry on.
             logger.info("hazard_event %s", payload)
@@ -144,7 +176,7 @@ async def entrypoint(ctx: JobContext) -> None:
 
     await session.start(
         room=ctx.room,
-        agent=SafeStepAgent(state),
+        agent=SafeStepAgent(state, nav),
         room_options=room_io.RoomOptions(
             audio_input=room_io.AudioInputOptions(
                 noise_cancellation=lambda params: noise_cancellation.BVCTelephony()
@@ -154,6 +186,13 @@ async def entrypoint(ctx: JobContext) -> None:
         ),
     )
     session.say(lang.greeting, allow_interruptions=True)
+
+
+def _opt_float(v: object) -> float | None:
+    try:
+        return None if v is None else float(v)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
 
 
 if __name__ == "__main__":

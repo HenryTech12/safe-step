@@ -8,6 +8,11 @@ const String topicMode = 'mode';
 const String topicWarnings = 'warnings';
 const String topicHazard = 'hazard_event';
 const String topicGps = 'gps';
+const String topicPlaces = 'places';
+const String topicPlaceSaved = 'place_saved';
+const String topicControl = 'control';
+const String topicFrameRequest = 'frame_request';
+const String streamCameraFrame = 'camera_frame';
 
 /// LiveKit participant attribute where the agent publishes its state.
 const String agentStateAttribute = 'lk.agent.state';

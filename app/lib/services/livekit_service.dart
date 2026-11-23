@@ -5,6 +5,8 @@ import 'package:livekit_client/livekit_client.dart';
 
 import '../models/app_mode.dart';
 import '../models/language.dart';
+import 'location_service.dart';
+import 'prefs_service.dart';
 import 'protocol.dart';
 import 'token_client.dart';
 
@@ -35,6 +37,19 @@ class LiveKitService extends ChangeNotifier {
   /// Called when the agent quiets or restores minor warnings.
   void Function(bool minorSilenced)? onWarningsFromAgent;
 
+  /// Called when the agent saved the current location under a name.
+  void Function(SavedPlace place)? onPlaceSaved;
+
+  /// Called when the agent asks for a camera frame (scene description).
+  void Function(String requestId)? onFrameRequest;
+
+  /// Places sent to the agent right after connecting.
+  List<SavedPlace> Function()? savedPlaces;
+
+  Future<void> publishFix(Fix fix) => _publish(topicGps, fix.toJson(), reliable: false);
+
+  Future<void> publishControl(String action) => _publish(topicControl, {'action': action});
+
   Future<void> connect({required AppLanguage language, required AppMode mode}) async {
     if (_room != null || _status == VoiceStatus.connecting) return;
     _setStatus(VoiceStatus.connecting);
@@ -55,6 +70,10 @@ class LiveKitService extends ChangeNotifier {
         debugPrint('LiveKitService.startAudio: $e');
       }
       _setStatus(_agentStatus(room) ?? VoiceStatus.waitingForAgent);
+      final places = savedPlaces?.call() ?? const [];
+      if (places.isNotEmpty) {
+        await _publish(topicPlaces, {'places': places.map((p) => p.toJson()).toList()});
+      }
     } catch (e) {
       debugPrint('LiveKitService.connect failed: $e');
       await _teardown();
@@ -87,11 +106,11 @@ class LiveKitService extends ChangeNotifier {
   }) =>
       _publish(topicHazard, {'class': hazardClass, 'side': side, 'distance_band': distanceBand});
 
-  Future<void> _publish(String topic, Map<String, Object?> payload) async {
+  Future<void> _publish(String topic, Map<String, Object?> payload, {bool reliable = true}) async {
     final lp = _room?.localParticipant;
     if (lp == null) return;
     try {
-      await lp.publishData(encodeMessage(payload), reliable: true, topic: topic);
+      await lp.publishData(encodeMessage(payload), reliable: reliable, topic: topic);
     } catch (e) {
       debugPrint('LiveKitService.publish($topic) failed: $e');
     }
@@ -129,6 +148,12 @@ class LiveKitService extends ChangeNotifier {
         if (msg['source'] == 'agent') onModeFromAgent?.call(AppMode.fromWire(msg['mode'] as String?));
       case topicWarnings:
         onWarningsFromAgent?.call(msg['minor_silenced'] == true);
+      case topicPlaceSaved:
+        try {
+          onPlaceSaved?.call(SavedPlace.fromJson(msg));
+        } catch (_) {}
+      case topicFrameRequest:
+        onFrameRequest?.call((msg['id'] as String?) ?? '');
     }
   }
 

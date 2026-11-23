@@ -28,6 +28,8 @@ The agent publishes `lk.agent.state` as a participant attribute (`initializing`,
 | `mode` | phone → agent | `{"mode": "hazard_detection", "source": "phone"}` sent after an offline phrase switches mode | 1 (agent side) / 3 (phone matcher) |
 | `warnings` | agent → phone | `{"minor_silenced": true}` sent by `quiet_minor_warnings`. Critical classes are never silenced. | 1 (agent) / 3 (phone) |
 | `hazard_event` | phone → agent | `{"class": "open_gutter", "side": "left", "distance_band": "near"}`, sent **after** the phone has played its own alert. The agent answers with a short "Make we continue." | 1 (agent) / 3 (phone) |
-| `gps` | phone → agent | `{"lat": 6.5, "lng": 3.4, "heading": 90}` | 2 |
+| `gps` | phone → agent | `{"lat": 6.5, "lng": 3.4, "accuracy": 5, "heading": 90}`, sent on each 3 m move and every 3 s (lossy) | 2 |
+| `places` | phone → agent | `{"places": [{"name": "home", "lat": .., "lng": ..}]}`, sent once after connecting | 2 |
+| `place_saved` | agent → phone | `{"name", "lat", "lng"}`, sent by the `save_place` tool; the phone stores it | 2 |
 
 Critical classes: `open_gutter`, `open_manhole`, `okada`.

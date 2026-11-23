@@ -46,8 +46,7 @@ def make_mode_tools(publish: Publisher = publish_to_phone) -> list:
         if mode == "navigation":
             return (
                 "Navigation mode is on and hazard warnings stay on. "
-                "Route guidance is not available yet in this build, so ask where they want to go "
-                "and say directions will come soon."
+                "If no destination is set yet, ask where they want to go."
             )
         return "Hazard warning mode is on. Confirm in a few words."
 
