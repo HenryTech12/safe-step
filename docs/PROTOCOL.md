@@ -25,11 +25,17 @@ The agent publishes `lk.agent.state` as a participant attribute (`initializing`,
 | Topic | Direction | Payload | Phase |
 |---|---|---|---|
 | `mode` | agent → phone | `{"mode": "navigation", "source": "agent"}` sent by the `set_mode` tool | 1 |
-| `mode` | phone → agent | `{"mode": "hazard_detection", "source": "phone"}` sent after an offline phrase switches mode | 1 (agent side) / 3 (phone matcher) |
+| `mode` | phone → agent | `{"mode": "hazard_detection", "source": "phone"}` sent on reconnect if an offline phrase changed the mode | 3 |
 | `warnings` | agent → phone | `{"minor_silenced": true}` sent by `quiet_minor_warnings`. Critical classes are never silenced. | 1 (agent) / 3 (phone) |
 | `hazard_event` | phone → agent | `{"class": "open_gutter", "side": "left", "distance_band": "near"}`, sent **after** the phone has played its own alert. The agent answers with a short "Make we continue." | 1 (agent) / 3 (phone) |
 | `gps` | phone → agent | `{"lat": 6.5, "lng": 3.4, "accuracy": 5, "heading": 90}`, sent on each 3 m move and every 3 s (lossy) | 2 |
 | `places` | phone → agent | `{"places": [{"name": "home", "lat": .., "lng": ..}]}`, sent once after connecting | 2 |
 | `place_saved` | agent → phone | `{"name", "lat", "lng"}`, sent by the `save_place` tool; the phone stores it | 2 |
 
+| `control` | phone → agent | `{"action": "repeat"}` on a long press: the agent repeats its last line | 4 |
+| `frame_request` | agent → phone | `{"id": "<id>"}` from the `describe_scene` tool | 4 |
+| byte stream `camera_frame` | phone → agent | one JPEG (max 768 px), attribute `id` = the request id | 4 |
+
 Critical classes: `open_gutter`, `open_manhole`, `okada`.
+
+The agent answers `hazard_event` only when the alert was critical, or when the agent was speaking and got paused. Minor alerts during silence get no reply, so the user isn't flooded.

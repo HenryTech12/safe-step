@@ -1,6 +1,6 @@
 # BlindSpot → SafeStep migration plan
 
-Status: **approved; Phase 1 implemented.** Hosting is deferred. Notes from implementation are marked *(Phase 1)*.
+Status: **approved; Phases 1–5 implemented.** Hosting is deferred. Notes from implementation are marked *(Phase 1)*.
 
 Source reviewed: `reference/BlindSpot-master` (kept locally only and ignored by git, because it contains `.backboard.json`, a 12 MB ONNX model, `.pyc` files and `.DS_Store`).
 

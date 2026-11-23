@@ -36,3 +36,5 @@ SafeStep is a voice-first Android app for blind and low-vision Nigerians, built 
 5. Demo mode, tests, docs.
 
 Do one phase, then stop and report.
+
+Status (Nov 2026): phases 1–5 implemented; see README and docs/TESTING.md. Remaining: on-device verification, fine-tuned model, native-speaker review of yo/ha/ig strings, hosting.

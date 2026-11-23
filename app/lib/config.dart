@@ -10,6 +10,9 @@ const String tokenServerUrl = String.fromEnvironment(
   defaultValue: 'http://10.0.2.2:8765',
 );
 
+/// Build with --dart-define=DEMO=true to show the demo-mode entry on the guide screen.
+const bool demoEnabled = bool.fromEnvironment('DEMO', defaultValue: false);
+
 /// How long to listen for a spoken language name during onboarding.
 const Duration languageListenWindow = Duration(seconds: 6);
 
