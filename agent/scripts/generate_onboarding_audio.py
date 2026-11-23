@@ -1,4 +1,5 @@
-"""Generate the app's offline onboarding clips from app/assets/onboarding/prompts.json.
+"""Generate the app's offline clips: onboarding (app/assets/onboarding/prompts.json) and
+hazard alerts (app/assets/alerts/alerts.json).
 
 Uses Spitch TTS (needs SPITCH_API_KEY in agent/.env). Every clip costs credits, so existing
 files are skipped unless --force is given.
@@ -6,6 +7,7 @@ files are skipped unless --force is given.
     cd agent
     uv run python scripts/generate_onboarding_audio.py            # all languages
     uv run python scripts/generate_onboarding_audio.py --lang yo   # one language
+    uv run python scripts/generate_onboarding_audio.py --only alerts
 """
 
 from __future__ import annotations
@@ -25,20 +27,29 @@ from spitch import Spitch  # noqa: E402
 
 from safestep_agent.languages import LANGUAGES  # noqa: E402
 
-ASSETS = ROOT / "app" / "assets" / "onboarding"
+SETS = {
+    "onboarding": ROOT / "app" / "assets" / "onboarding" / "prompts.json",
+    "alerts": ROOT / "app" / "assets" / "alerts" / "alerts.json",
+}
 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--lang", choices=sorted(LANGUAGES), action="append")
     ap.add_argument("--force", action="store_true")
+    ap.add_argument("--only", choices=sorted(SETS))
     args = ap.parse_args()
 
-    prompts = json.loads((ASSETS / "prompts.json").read_text(encoding="utf-8"))
     client = Spitch()
     langs = args.lang or list(LANGUAGES)
     made = skipped = 0
-    for prompt_id, by_lang in prompts.items():
+    items = []
+    for set_name, path in SETS.items():
+        if args.only and args.only != set_name:
+            continue
+        for prompt_id, by_lang in json.loads(path.read_text(encoding="utf-8")).items():
+            items.append((path.parent, prompt_id, by_lang))
+    for assets, prompt_id, by_lang in items:
         if prompt_id.startswith("_"):
             continue
         for code in langs:
@@ -46,7 +57,7 @@ def main() -> None:
             if not text:
                 continue
             lang = LANGUAGES[code]
-            out = ASSETS / code / f"{prompt_id}.mp3"
+            out = assets / code / f"{prompt_id}.mp3"
             if out.exists() and not args.force:
                 skipped += 1
                 continue
