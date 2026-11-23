@@ -1,0 +1,64 @@
+{
+  "_note": "Source of truth for onboarding speech. Clips are generated from this by agent/scripts/generate_onboarding_audio.py into assets/onboarding/<lang>/<id>.mp3. Yoruba, Hausa and Igbo lines NEED NATIVE-SPEAKER REVIEW.",
+  "welcome": {
+    "en": "Welcome to SafeStep. Tap anywhere on the screen to start.",
+    "pcm": "Welcome to SafeStep. Touch anywhere for the screen make we start.",
+    "yo": "Ẹ kú àbọ̀ sí SafeStep. Tẹ ibikíbi lórí ojú fóònù láti bẹ̀rẹ̀.",
+    "ha": "Barka da zuwa SafeStep. Taɓa ko'ina a allon don farawa.",
+    "ig": "Nnọọ na SafeStep. Pịa ebe ọ bụla na ihuenyo ka ịmalite."
+  },
+  "mic_request": {
+    "en": "SafeStep needs your microphone so you can talk to it. Your phone will now ask for permission. The allow button is usually at the bottom.",
+    "pcm": "SafeStep need your microphone make you fit talk to am. Your phone go ask you now. The allow button dey for down."
+  },
+  "mic_denied": {
+    "en": "SafeStep cannot work without the microphone. Tap anywhere to try again.",
+    "pcm": "SafeStep no fit work without microphone. Touch anywhere make we try again."
+  },
+  "choose_language": {
+    "en": "Which language do you want? Say English, Pidgin, Yoruba, Hausa, or Igbo. Or tap: one tap for English, two for Pidgin, three for Yoruba, four for Hausa, five for Igbo.",
+    "pcm": "Which language you want? Talk am now.",
+    "yo": "Èdè wo lẹ fẹ́? Ẹ sọ ọ́ báyìí.",
+    "ha": "Wane harshe kake so? Faɗa yanzu.",
+    "ig": "Kedu asụsụ ị chọrọ? Kwuo ya ugbu a."
+  },
+  "language_not_heard": {
+    "en": "Sorry, I did not catch that.",
+    "pcm": "Sorry, I no hear am well."
+  },
+  "language_confirmed": {
+    "en": "English. Tap twice quickly to change, or wait.",
+    "pcm": "Pidgin. Touch two times quick quick if you wan change am, or just wait.",
+    "yo": "Yorùbá. Tẹ ẹ̀ẹ̀mejì kíákíá láti yí i padà, tàbí kí ẹ dúró.",
+    "ha": "Hausa. Taɓa sau biyu da sauri don canzawa, ko ka jira.",
+    "ig": "Igbo. Pịa ugboro abụọ ngwa ngwa ka ịgbanwee ya, ma ọ bụ chere."
+  },
+  "camera_location": {
+    "en": "SafeStep uses the camera to spot dangers like open gutters, and your location to guide you. Your phone will now ask for both.",
+    "pcm": "SafeStep dey use camera take see danger like open gutter, and your location take show you road. Your phone go ask you for the two now.",
+    "yo": "SafeStep ń lo kámẹ́rà láti rí ewu bí kòtò tó ṣí sílẹ̀, àti ibi tí ẹ wà láti tọ́ yín sọ́nà. Fóònù yín yóò béèrè fún méjèèjì báyìí.",
+    "ha": "SafeStep na amfani da kyamara don ganin haɗari kamar buɗaɗɗen magudanar ruwa, da wurinka don jagorantarka. Wayarka za ta nemi duka biyun yanzu.",
+    "ig": "SafeStep na-eji igwefoto ahụ ihe egwu dịka olulu mmiri meghere emeghe, na ebe ị nọ iji duzie gị. Ekwentị gị ga-ajụ maka ha abụọ ugbu a."
+  },
+  "permissions_denied": {
+    "en": "Without the camera I cannot warn you about dangers. You can allow it later in settings.",
+    "pcm": "If camera no dey, I no fit warn you about danger. You fit allow am later for settings.",
+    "yo": "Láìsí kámẹ́rà, mi ò lè kìlọ̀ fún yín nípa ewu. Ẹ lè gbà á láàyè lẹ́yìn náà nínú ètò.",
+    "ha": "Ba tare da kyamara ba, ba zan iya gargade ka game da haɗari ba. Za ka iya ba da izini daga baya a saituna.",
+    "ig": "Na-enweghị igwefoto, enweghị m ike ịdọ gị aka ná ntị maka ihe egwu. Ị nwere ike ikwe ya ma emechaa na ntọala."
+  },
+  "tips_offer": {
+    "en": "Tap once to hear some tips, or wait to skip.",
+    "pcm": "Touch one time if you wan hear small advice, or just wait.",
+    "yo": "Tẹ ẹ̀ẹ̀kan láti gbọ́ àwọn ìmọ̀ràn, tàbí kí ẹ dúró láti fò ó.",
+    "ha": "Taɓa sau ɗaya don jin wasu shawarwari, ko ka jira don tsallakewa.",
+    "ig": "Pịa otu ugboro ka ịnụ ndụmọdụ, ma ọ bụ chere ka ịgafe."
+  },
+  "tips": {
+    "en": "Hold the phone at chest height with the back camera facing forward. Just speak to talk to me. Double tap anywhere to mute or unmute the microphone. You can say: take me to a place, warnings only, or stop warning me.",
+    "pcm": "Hold the phone for your chest, make the back camera face front. Just talk, I go hear you. Touch two times to off or on the microphone. You fit talk: carry me go one place, na only warning I want, or stop to dey warn me.",
+    "yo": "Ẹ di fóònù mú ní ìbámu àyà yín, kí kámẹ́rà ẹ̀yìn kọjú sí iwájú. Ẹ kàn sọ̀rọ̀ láti bá mi sọ̀rọ̀. Ẹ tẹ ẹ̀ẹ̀mejì láti pa tàbí tan gbohùngbohùn.",
+    "ha": "Riƙe wayar a tsayin ƙirjinka, kyamarar baya tana fuskantar gaba. Kawai yi magana don magana da ni. Taɓa sau biyu don kashe ko kunna makirufo.",
+    "ig": "Jide ekwentị n'ogo obi gị, ka igwefoto azụ chee ihu. Naanị kwuo okwu ka gị na m kparịta. Pịa ugboro abụọ iji gbanyụọ ma ọ bụ gbanwuo igwe okwu."
+  }
+}
