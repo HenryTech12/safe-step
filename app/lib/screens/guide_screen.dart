@@ -1,113 +1,118 @@
-import 'dart:async';
-
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
-import '../l10n/strings.dart';
+import '../guide/guide_controller.dart';
 import '../models/app_mode.dart';
-import '../models/language.dart';
 import '../services/livekit_service.dart';
-import '../services/location_service.dart';
-import '../services/prefs_service.dart';
 import '../theme.dart';
 import '../widgets/status_card.dart';
 
-/// Main screen. Phase 1: connects to the agent and shows its state.
-/// Gestures: double tap = mic on/off (or retry when offline).
-/// Phase 4 adds swipe down to mute and long press to repeat.
+/// Main screen: one full-screen gesture surface and a large status card.
+/// - double tap: talk (mic on/off); when offline, listen for a fixed command
+/// - swipe down: mute / unmute the agent's voice (hazard alerts always play)
+/// - long press: repeat the last thing said
+/// With TalkBack on, the same actions are exposed as semantic actions on the screen.
 class GuideScreen extends StatefulWidget {
-  const GuideScreen({super.key, required this.voice, required this.prefs});
+  const GuideScreen({super.key, required this.controller, this.onOpenDemo});
 
-  final LiveKitService voice;
-  final PrefsService prefs;
+  final GuideController controller;
+  final VoidCallback? onOpenDemo;
 
   @override
   State<GuideScreen> createState() => _GuideScreenState();
 }
 
 class _GuideScreenState extends State<GuideScreen> {
-  late final AppLanguage _lang = widget.prefs.language;
-  late AppMode _mode = widget.prefs.lastMode;
-  final LocationService _location = LocationService();
-  StreamSubscription<Fix>? _fixSub;
+  GuideController get c => widget.controller;
 
   @override
   void initState() {
     super.initState();
-    widget.voice
-      ..addListener(_onChange)
-      ..onModeFromAgent = (m) {
-        widget.prefs.setLastMode(m);
-        setState(() => _mode = m);
-      }
-      ..savedPlaces = (() => widget.prefs.savedPlaces)
-      ..onPlaceSaved = (p) {
-        final places = [...widget.prefs.savedPlaces.where((x) => x.name != p.name), p];
-        widget.prefs.setSavedPlaces(places);
-      };
-    _connect();
-    _location.start().then((ok) {
-      if (ok) _fixSub = _location.fixes.listen(widget.voice.publishFix);
-    });
+    c.addListener(_onChange);
+    c.start();
   }
-
-  Future<void> _connect() => widget.voice.connect(language: _lang, mode: _mode);
 
   void _onChange() {
     if (mounted) setState(() {});
   }
 
-  Future<void> _onDoubleTap() async {
-    HapticFeedback.mediumImpact();
-    final v = widget.voice;
-    if (!v.isConnected) {
-      await _connect();
-    } else {
-      await v.setMicEnabled(!v.micEnabled);
-    }
-  }
-
   @override
   void dispose() {
-    widget.voice.removeListener(_onChange);
-    _fixSub?.cancel();
-    _location.dispose();
+    c.removeListener(_onChange);
     super.dispose();
+  }
+
+  Future<void> _doubleTap() async {
+    HapticFeedback.mediumImpact();
+    await c.onDoubleTap();
+  }
+
+  Future<void> _swipeDown() async {
+    HapticFeedback.heavyImpact();
+    await c.onSwipeDown();
+  }
+
+  Future<void> _longPress() async {
+    HapticFeedback.selectionClick();
+    await c.onLongPress();
   }
 
   @override
   Widget build(BuildContext context) {
-    final s = Strings.of(_lang);
-    final v = widget.voice;
-    final (String title, Color color) = switch (v.status) {
-      VoiceStatus.connecting || VoiceStatus.waitingForAgent => (s.connecting, SafeStepColors.accent),
-      VoiceStatus.listening => v.micEnabled ? (s.listening, SafeStepColors.ok) : (s.micMuted, SafeStepColors.accent),
-      VoiceStatus.thinking => (s.thinking, SafeStepColors.accent),
-      VoiceStatus.speaking => (s.speaking, SafeStepColors.ok),
-      VoiceStatus.disconnected || VoiceStatus.failed => (s.offline, SafeStepColors.danger),
-    };
-    final modeLabel = _mode == AppMode.navigation ? s.modeNavigation : s.modeHazard;
+    final s = c.strings;
+    final v = c.voice;
+    final (String title, Color color) = c.listeningOffline
+        ? (s.listening, SafeStepColors.accent)
+        : switch (v.status) {
+            VoiceStatus.connecting || VoiceStatus.waitingForAgent => (s.connecting, SafeStepColors.accent),
+            VoiceStatus.listening =>
+              v.micEnabled ? (s.listening, SafeStepColors.ok) : (s.micMuted, SafeStepColors.accent),
+            VoiceStatus.thinking => (s.thinking, SafeStepColors.accent),
+            VoiceStatus.speaking => (s.speaking, SafeStepColors.ok),
+            VoiceStatus.disconnected || VoiceStatus.failed => (s.offline, SafeStepColors.danger),
+          };
+    final modeLabel = c.mode == AppMode.navigation ? s.modeNavigation : s.modeHazard;
+    final subtitle = [
+      modeLabel,
+      if (c.agentVoiceMuted) s.agentMuted,
+      if (c.hazards?.minorSilenced ?? false) s.minorQuiet,
+    ].join('. ');
 
     return Scaffold(
       body: Semantics(
-        button: true,
-        label: '$title. $modeLabel',
+        label: '$title. $subtitle',
         hint: s.screenHint,
-        onTap: _onDoubleTap, // TalkBack's double tap activates this
+        onTap: _doubleTap, // TalkBack double tap
+        onLongPress: _longPress,
+        customSemanticsActions: {
+          CustomSemanticsAction(label: s.agentMuted): _swipeDown,
+          if (widget.onOpenDemo != null) CustomSemanticsAction(label: s.demoMode): widget.onOpenDemo!,
+        },
         excludeSemantics: true,
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onDoubleTap: _onDoubleTap,
+          onDoubleTap: _doubleTap,
+          onLongPress: _longPress,
+          onVerticalDragEnd: (d) {
+            if ((d.primaryVelocity ?? 0) > 600) _swipeDown();
+          },
           child: SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  StatusCard(title: title, subtitle: modeLabel, color: color),
+                  StatusCard(title: title, subtitle: subtitle, color: color),
                   const SizedBox(height: 32),
-                  Text(s.screenHint,
-                      textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodyLarge),
+                  Text(s.screenHint, textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodyLarge),
+                  if (widget.onOpenDemo != null) ...[
+                    const SizedBox(height: 24),
+                    TextButton(
+                      onPressed: widget.onOpenDemo,
+                      child: Text(s.demoMode, style: const TextStyle(fontSize: 22, color: SafeStepColors.accent)),
+                    ),
+                  ],
                 ],
               ),
             ),

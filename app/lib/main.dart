@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import 'config.dart';
+import 'guide/guide_controller.dart';
 import 'models/language.dart';
 import 'onboarding/onboarding_controller.dart';
 import 'screens/guide_screen.dart';
@@ -37,6 +38,15 @@ class _SafeStepAppState extends State<SafeStepApp> {
   late bool _onboarded = widget.prefs.onboarded;
   OnboardingController? _onboarding;
   PromptPlayer? _player;
+  GuideController? _guide;
+
+  GuideController _guideController() => _guide ??= GuideController(
+        prefs: widget.prefs,
+        voice: widget.voice,
+        recognizer: DeviceLanguageRecognizer(
+          phrases: const ['stop warning me', 'warnings only', 'navigation', 'repeat', 'say again'],
+        ),
+      );
 
   @override
   void initState() {
@@ -71,7 +81,7 @@ class _SafeStepAppState extends State<SafeStepApp> {
   Widget build(BuildContext context) {
     final Widget home;
     if (_onboarded) {
-      home = GuideScreen(voice: widget.voice, prefs: widget.prefs);
+      home = GuideScreen(controller: _guideController());
     } else if (_onboarding != null) {
       home = OnboardingScreen(controller: _onboarding!, onFinished: _finishOnboarding);
     } else {

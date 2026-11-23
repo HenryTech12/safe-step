@@ -40,6 +40,8 @@ from .nav.controller import NavigationController  # noqa: E402
 from .nav.maps import MapsClient  # noqa: E402
 from .tools.mode import make_mode_tools  # noqa: E402
 from .tools.navigation import make_navigation_tools  # noqa: E402
+from .scene import SceneDescriber  # noqa: E402
+from .tools.scene import make_scene_tools  # noqa: E402
 
 logger = logging.getLogger("safestep.agent")
 
@@ -53,10 +55,10 @@ def _thinking_config(model: str) -> dict:
 
 
 class SafeStepAgent(Agent):
-    def __init__(self, state: SessionState, nav: NavigationController) -> None:
+    def __init__(self, state: SessionState, nav: NavigationController, scene: SceneDescriber) -> None:
         super().__init__(
             instructions=build_instructions(state.language, state.mode),
-            tools=make_mode_tools() + make_navigation_tools(nav),
+            tools=make_mode_tools() + make_navigation_tools(nav) + make_scene_tools(scene),
         )
 
 
@@ -130,6 +132,22 @@ async def entrypoint(ctx: JobContext) -> None:
     nav = NavigationController(maps, lang.code, _speak_nav)
     ctx.add_shutdown_callback(maps.aclose)
 
+    # --- scene description: one frame on request, never a continuous stream ---
+    async def _request_frame(request_id: str) -> None:
+        await ctx.room.local_participant.publish_data(
+            protocol.encode({"id": request_id}), topic=protocol.TOPIC_FRAME_REQUEST, reliable=True
+        )
+
+    scene = SceneDescriber(_request_frame, lang)
+
+    async def _read_frame(reader: rtc.ByteStreamReader) -> None:
+        chunks = [c async for c in reader]
+        scene.on_frame(reader.info.attributes.get("id", ""), b"".join(chunks))
+
+    ctx.room.register_byte_stream_handler(
+        protocol.STREAM_CAMERA_FRAME, lambda reader, _identity: asyncio.create_task(_read_frame(reader))
+    )
+
     # --- data messages from the phone ---
     def _on_data(packet: rtc.DataPacket) -> None:
         payload = protocol.decode(packet.data)
@@ -162,21 +180,41 @@ async def entrypoint(ctx: JobContext) -> None:
                 except (KeyError, TypeError, ValueError):
                     continue
         elif packet.topic == protocol.TOPIC_HAZARD:
-            # Phone already played the offline alert; just help the user carry on.
+            # The phone already played its offline alert (with the agent's voice paused).
             logger.info("hazard_event %s", payload)
-            asyncio.create_task(_say_continue())
+            critical = str(payload.get("class", "")) in protocol.CRITICAL_CLASSES
+            if critical or session.agent_state == "speaking":
+                # The user lost what the agent was saying, or just faced real danger: help them
+                # carry on with one short line. Minor alerts during silence need no reply.
+                if session.agent_state == "speaking":
+                    session.interrupt()
+                _say(lang.continue_line)
+        elif packet.topic == protocol.TOPIC_CONTROL:
+            if payload.get("action") == "repeat":
+                last = _last_agent_text()
+                if last:
+                    session.interrupt()
+                    _say(last, add_to_chat=False)
 
-    async def _say_continue() -> None:
+    def _say(text: str, add_to_chat: bool = True) -> None:
         try:
-            session.say(lang.continue_line, allow_interruptions=True)
+            session.say(text, allow_interruptions=True, add_to_chat_ctx=add_to_chat)
         except RuntimeError as e:
-            logger.debug("say continue failed: %s", e)
+            logger.debug("say failed: %s", e)
+
+    def _last_agent_text() -> str | None:
+        for item in reversed(session.history.items):
+            if getattr(item, "role", None) == "assistant":
+                text = (getattr(item, "text_content", None) or "").strip()
+                if text:
+                    return text
+        return None
 
     ctx.room.on("data_received", _on_data)
 
     await session.start(
         room=ctx.room,
-        agent=SafeStepAgent(state, nav),
+        agent=SafeStepAgent(state, nav, scene),
         room_options=room_io.RoomOptions(
             audio_input=room_io.AudioInputOptions(
                 noise_cancellation=lambda params: noise_cancellation.BVCTelephony()

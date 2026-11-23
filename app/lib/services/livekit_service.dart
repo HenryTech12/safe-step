@@ -46,7 +46,35 @@ class LiveKitService extends ChangeNotifier {
   /// Places sent to the agent right after connecting.
   List<SavedPlace> Function()? savedPlaces;
 
+  bool _agentMuted = false;
+
+  /// Pause/resume the agent's voice locally (hazard alerts, swipe-down mute).
+  Future<void> setAgentAudioMuted(bool muted) async {
+    _agentMuted = muted;
+    final room = _room;
+    if (room == null) return;
+    for (final p in room.remoteParticipants.values) {
+      for (final pub in p.audioTrackPublications) {
+        final t = pub.track;
+        if (t == null) continue;
+        muted ? await t.disable() : await t.enable();
+      }
+    }
+  }
+
   Future<void> publishFix(Fix fix) => _publish(topicGps, fix.toJson(), reliable: false);
+
+  /// Sends a camera JPEG for scene description, as a byte stream (too big for a data packet).
+  Future<void> sendFrame(String requestId, List<int> jpeg) async {
+    final lp = _room?.localParticipant;
+    if (lp == null) return;
+    try {
+      await lp.sendBytes(jpeg,
+          options: SendBytesOptions(topic: streamCameraFrame, mimeType: 'image/jpeg', attributes: {'id': requestId}));
+    } catch (e) {
+      debugPrint('LiveKitService.sendFrame failed: $e');
+    }
+  }
 
   Future<void> publishControl(String action) => _publish(topicControl, {'action': action});
 
@@ -132,6 +160,7 @@ class LiveKitService extends ChangeNotifier {
       ..on<ParticipantAttributesChanged>((_) => _refreshAgentStatus(room))
       ..on<TrackSubscribedEvent>((e) async {
         if (e.track.kind == TrackType.AUDIO) {
+          if (_agentMuted) await e.track.disable();
           try {
             await room.startAudio();
           } catch (_) {}

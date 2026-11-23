@@ -9,10 +9,12 @@ import '../onboarding/onboarding_controller.dart';
 /// onboarding (before the agent is connected). Falls back gracefully: if it is not
 /// available, listen() returns null and the user can use tap counting instead.
 class DeviceLanguageRecognizer implements LanguageRecognizer {
+  DeviceLanguageRecognizer({this.phrases = const ['English', 'Pidgin', 'Naija', 'Yoruba', 'Hausa', 'Igbo']});
+
+  /// Hints for the recogniser (Android 13+ uses them to bias recognition).
+  final List<String> phrases;
   final SpeechToText _stt = SpeechToText();
   bool? _ready;
-
-  static const _phrases = ['English', 'Pidgin', 'Naija', 'Yoruba', 'Hausa', 'Igbo'];
 
   @override
   Future<String?> listen(Duration window) async {
@@ -32,7 +34,7 @@ class DeviceLanguageRecognizer implements LanguageRecognizer {
         partialResults: true,
         cancelOnError: true,
         listenMode: ListenMode.confirmation,
-        contextualPhrases: _phrases,
+        contextualPhrases: phrases,
       ),
     );
     return done.future.timeout(window + const Duration(seconds: 1), onTimeout: () async {
