@@ -1,0 +1,12 @@
+# SafeStep hazard classes. severity: critical alerts can never be silenced.
+classes:
+  - {id: 0, name: open_gutter,         severity: critical}
+  - {id: 1, name: pothole,             severity: minor}
+  - {id: 2, name: open_manhole,        severity: critical}
+  - {id: 3, name: kerb_drop,           severity: minor}
+  - {id: 4, name: okada,               severity: critical}
+  - {id: 5, name: vehicle,             severity: minor}
+  - {id: 6, name: person,              severity: minor}
+  - {id: 7, name: pole,                severity: minor}
+  - {id: 8, name: trader_table,        severity: minor}
+  - {id: 9, name: construction_debris, severity: minor}
